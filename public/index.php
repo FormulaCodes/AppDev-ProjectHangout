@@ -85,7 +85,11 @@ function escape(string $value): string
                 <div class="places-grid">
                     <?php foreach ($places as $place): ?>
                         <article class="place-card">
-                            <h3><?= escape($place['name']) ?></h3>
+                            <h3>
+                                <a href="place.php?id=<?= (int) $place['id'] ?>">
+                                <?= escape($place['name']) ?>
+                                </a>
+                            </h3>
 
                             <p>
                                 <?= escape($place['description'] ?? '') ?>

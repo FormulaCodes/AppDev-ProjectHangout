@@ -83,3 +83,38 @@ main {
     outline: 2px solid #647f9e;
     outline-offset: 2px;
 }
+
+
+.place-detail {
+    background: white;
+    border: 1px solid #e1e5eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.place-detail h2 {
+    margin-top: 0;
+}
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: #e8edf4;
+    color: #25364a;
+    font-size: 0.9rem;
+}
+
+a {
+    color: #25364a;
+}
+
+a:hover {
+    text-decoration-thickness: 2px;
+}

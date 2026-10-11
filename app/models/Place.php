@@ -90,5 +90,43 @@ class Place
 
         return $this->db->query($sql)->fetchAll();
     }
+
+    
+public function getById(int $id): ?array
+{
+    $sql = "
+        SELECT
+            p.id,
+            p.name,
+            p.description,
+            p.address,
+            p.latitude,
+            p.longitude,
+            GROUP_CONCAT(
+                DISTINCT t.name
+                ORDER BY t.name
+                SEPARATOR ', '
+            ) AS tags
+        FROM places p
+        LEFT JOIN place_tags pt ON p.id = pt.place_id
+        LEFT JOIN tags t ON pt.tag_id = t.id
+        WHERE p.id = :id
+        GROUP BY
+            p.id,
+            p.name,
+            p.description,
+            p.address,
+            p.latitude,
+            p.longitude
+    ";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute(['id' => $id]);
+
+    $place = $stmt->fetch();
+
+    return $place ?: null;
+}
+
 }
 
