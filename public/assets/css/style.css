@@ -144,3 +144,73 @@ header button {
 header button:hover {
     background: #d6e5f5;
 }
+
+
+.reviews-section {
+    margin-top: 2rem;
+}
+
+.review-summary {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #e8edf4;
+    border-radius: 10px;
+}
+
+.reviews-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.review-card {
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid #e1e5eb;
+    border-radius: 12px;
+}
+
+.review-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.review-card p {
+    overflow-wrap: anywhere;
+}
+
+.review-card small,
+.review-no-comment {
+    color: #626b78;
+}
+
+
+.review-form-section {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid #e1e5eb;
+    border-radius: 12px;
+}
+
+.review-form-section textarea {
+    width: 100%;
+    padding: 0.75rem;
+    font: inherit;
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    resize: vertical;
+}
+
+.review-form-section input[type="radio"] {
+    margin-right: 0.35rem;
+}
+
+.review-message {
+    padding: 0.75rem;
+    background: #e8edf4;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+

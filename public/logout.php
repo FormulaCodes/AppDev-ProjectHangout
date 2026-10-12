@@ -19,10 +19,8 @@ if (
     exit('Invalid form submission. Please return to the homepage and try again.');
 }
 
-// Clear session data.
 $_SESSION = [];
 
-// Invalidate the session cookie.
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
 

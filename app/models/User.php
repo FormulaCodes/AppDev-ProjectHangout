@@ -59,7 +59,7 @@ class User
 
         return $user ?: null;
     }
-    
+
     public function authenticate(
         string $email,
         string $password
@@ -74,7 +74,6 @@ class User
             return null;
         }
 
-        // Never pass the stored password hash into the session.
         unset($user['password_hash']);
 
         return $user;
