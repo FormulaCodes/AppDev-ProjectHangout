@@ -1,6 +1,8 @@
 
-
 <?php
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../app/config/database.php';
 require_once __DIR__ . '/../app/models/Place.php';
@@ -33,10 +35,31 @@ function escape(string $value): string
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+    
     <header>
         <h1>Hangout</h1>
         <p>Discover places around your campus.</p>
+
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <p>
+                Welcome, <?= escape((string) $_SESSION['username']) ?>!
+            </p>
+            <form method="POST" action="logout.php">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= escape($_SESSION['csrf_token']) ?>"
+                >
+                <button type="submit">Logout</button>
+            </form>
+        <?php else: ?>
+            <p>
+                <a href="login.php">Login</a> |
+                <a href="register.php">Register</a>
+            </p>
+        <?php endif; ?>
     </header>
+
 
     <main>
         <section>

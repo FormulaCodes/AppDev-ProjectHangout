@@ -118,3 +118,29 @@ a {
 a:hover {
     text-decoration-thickness: 2px;
 }
+
+
+header a {
+    color: #ffffff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+header a:hover {
+    color: #d6e5f5;
+}
+
+header button {
+    padding: 0.6rem 1rem;
+    border: 1px solid #ffffff;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #25364a;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+header button:hover {
+    background: #d6e5f5;
+}

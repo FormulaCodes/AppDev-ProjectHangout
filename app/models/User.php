@@ -59,4 +59,25 @@ class User
 
         return $user ?: null;
     }
+    
+    public function authenticate(
+        string $email,
+        string $password
+    ): ?array {
+        $user = $this->findByEmail($email);
+
+        if ($user === null) {
+            return null;
+        }
+
+        if (!password_verify($password, $user['password_hash'])) {
+            return null;
+        }
+
+        // Never pass the stored password hash into the session.
+        unset($user['password_hash']);
+
+        return $user;
+    }
+
 }
