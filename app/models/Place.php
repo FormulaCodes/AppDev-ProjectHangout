@@ -128,5 +128,60 @@ public function getById(int $id): ?array
     return $place ?: null;
 }
 
+
+public function create(
+    string $name,
+    string $description,
+    string $address
+): int {
+    $sql = "
+        INSERT INTO places (name, description, address)
+        VALUES (:name, :description, :address)
+    ";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([
+        'name' => $name,
+        'description' => $description,
+        'address' => $address
+    ]);
+
+    return (int) $this->db->lastInsertId();
+}
+
+public function update(
+    int $id,
+    string $name,
+    string $description,
+    string $address
+): bool {
+    $sql = "
+        UPDATE places
+        SET name = :name,
+            description = :description,
+            address = :address
+        WHERE id = :id
+    ";
+
+    $stmt = $this->db->prepare($sql);
+
+    return $stmt->execute([
+        'id' => $id,
+        'name' => $name,
+        'description' => $description,
+        'address' => $address
+    ]);
+}
+
+public function delete(int $id): bool
+{
+    $sql = "DELETE FROM places WHERE id = :id";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute(['id' => $id]);
+
+    return $stmt->rowCount() > 0;
+}
+
 }
 

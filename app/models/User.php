@@ -43,10 +43,11 @@ class User
         return (int) $this->db->lastInsertId();
     }
 
+    
     public function findByEmail(string $email): ?array
     {
         $sql = "
-            SELECT id, username, email, password_hash
+            SELECT id, username, email, password_hash, role
             FROM users
             WHERE email = :email
             LIMIT 1
@@ -59,6 +60,7 @@ class User
 
         return $user ?: null;
     }
+
 
     public function authenticate(
         string $email,

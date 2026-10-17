@@ -214,3 +214,30 @@ header button:hover {
     overflow-wrap: anywhere;
 }
 
+* {
+    box-sizing: border-box;
+}
+
+img,
+textarea,
+input,
+select {
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .place-list,
+    .places-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    main {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}

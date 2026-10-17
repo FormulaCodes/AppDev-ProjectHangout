@@ -185,22 +185,20 @@ $tags = $place['tags'] !== null
         <section class="reviews-section">
             <h2>Ratings and Reviews</h2>
 
-            <div class="review-summary">
-                <?php if ($summary['total_reviews'] > 0): ?>
-                    <p>
-                        <strong>
-                            <?= number_format($summary['average_rating'], 1) ?>
-                            / 5
-                        </strong>
-                        based on
-                        <?= $summary['total_reviews'] ?>
-                        <?= $summary['total_reviews'] === 1
-                            ? 'review'
-                            : 'reviews' ?>
-                    </p>
-                <?php else: ?>
-                    <p>No reviews yet. Be the first to share your experience!</p>
-                <?php endif; ?>
+           <div class="review-summary">
+    <?php if ($summary['total_reviews'] > 0): ?>
+        <strong>
+            <?= number_format($summary['average_rating'], 1) ?> / 5
+        </strong>
+
+        <span>
+            (<?= $summary['total_reviews'] ?>
+            <?= $summary['total_reviews'] === 1 ? 'review' : 'reviews' ?>)
+        </span>
+    <?php else: ?>
+        <strong>No ratings yet</strong>
+        <span>Be the first to review this place.</span>
+    <?php endif; ?>
             </div>
 
             <?php if (empty($reviews)): ?>

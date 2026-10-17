@@ -47,8 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-
-                // Rotate the token after successful login.
+                $_SESSION['role'] = $user['role'];
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
                 header('Location: index.php');
