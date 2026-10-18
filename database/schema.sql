@@ -1,10 +1,9 @@
-
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 18, 2026 at 06:54 PM
+-- Generation Time: Oct 18, 2026 at 09:21 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -24,11 +23,11 @@ USE `hangout_db`;
 -- Table structure for table `places`
 --
 
-DROP TABLE IF EXISTS `places`;
 CREATE TABLE `places` (
   `id` int(10) UNSIGNED NOT NULL,
   `name` varchar(150) NOT NULL,
   `description` text DEFAULT NULL,
+  `image_url` varchar(500) DEFAULT NULL,
   `address` varchar(255) NOT NULL,
   `latitude` decimal(10,7) DEFAULT NULL,
   `longitude` decimal(10,7) DEFAULT NULL,
@@ -43,7 +42,6 @@ CREATE TABLE `places` (
 -- Table structure for table `place_suggestions`
 --
 
-DROP TABLE IF EXISTS `place_suggestions`;
 CREATE TABLE `place_suggestions` (
   `id` int(10) UNSIGNED NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL,
@@ -65,7 +63,6 @@ CREATE TABLE `place_suggestions` (
 -- Table structure for table `place_tags`
 --
 
-DROP TABLE IF EXISTS `place_tags`;
 CREATE TABLE `place_tags` (
   `place_id` int(10) UNSIGNED NOT NULL,
   `tag_id` int(10) UNSIGNED NOT NULL
@@ -77,7 +74,6 @@ CREATE TABLE `place_tags` (
 -- Table structure for table `reviews`
 --
 
-DROP TABLE IF EXISTS `reviews`;
 CREATE TABLE `reviews` (
   `id` int(10) UNSIGNED NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL,
@@ -95,7 +91,6 @@ CREATE TABLE `reviews` (
 -- Table structure for table `tags`
 --
 
-DROP TABLE IF EXISTS `tags`;
 CREATE TABLE `tags` (
   `id` int(10) UNSIGNED NOT NULL,
   `name` varchar(50) NOT NULL,
@@ -108,7 +103,6 @@ CREATE TABLE `tags` (
 -- Table structure for table `users`
 --
 
-DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` int(10) UNSIGNED NOT NULL,
   `username` varchar(50) NOT NULL,
