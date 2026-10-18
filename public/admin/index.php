@@ -16,14 +16,13 @@ function escape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-// Count pending suggestions for the badge, tolerating a missing table.
 $pendingSuggestions = 0;
 try {
     $pendingSuggestions = (int) $pdo
         ->query("SELECT COUNT(*) FROM place_suggestions WHERE status = 'pending'")
         ->fetchColumn();
 } catch (Throwable $e) {
-    // Table not created yet — badge will hide, page still works.
+
     $pendingSuggestions = 0;
 }
 ?>

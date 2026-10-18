@@ -23,14 +23,12 @@ function escapeValue($value): string
     );
 }
 
-// ---- Read ID first ----
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id || $id < 1) {
     http_response_code(400);
     exit('Invalid place ID.');
 }
 
-// ---- Instantiate model, load data ----
 $placeModel = new Place($pdo);
 
 $place = $placeModel->getById($id, true);
@@ -56,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim((string) ($_POST['description'] ?? ''));
     $address     = trim((string) ($_POST['address'] ?? ''));
 
-    // Coordinates — optional
     $latInput = $_POST['latitude']  ?? '';
     $lngInput = $_POST['longitude'] ?? '';
 
@@ -76,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Image URL — preserve existing if blank, clear if "remove_image" checked
     $imageUrlInput  = $_POST['image_url'] ?? '';
     $removeImage    = isset($_POST['remove_image']);
     $existingImage  = $place['image_url'] ?? null;
@@ -98,7 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Required fields
     if ($errorMessage === '') {
         if ($name === '' || $description === '' || $address === '') {
             $errorMessage = 'Please fill in all required fields.';
@@ -138,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Repopulate form on error
     $place['name']        = $name;
     $place['description'] = $description;
     $place['address']     = $address;

@@ -52,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'The place could not be restored. It may already be active or no longer exist.';
             }
         } elseif ($action === 'add') {
-            // ---- Read inputs ----
             $nameInput        = $_POST['name'] ?? '';
             $descriptionInput = $_POST['description'] ?? '';
             $addressInput     = $_POST['address'] ?? '';
@@ -64,7 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $description = is_string($descriptionInput) ? trim($descriptionInput) : '';
             $address     = is_string($addressInput) ? trim($addressInput) : '';
 
-            // ---- Coordinates (optional) ----
             $latitude  = null;
             $longitude = null;
 
@@ -82,7 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // ---- Image URL (optional, must be http/https) ----
             $imageUrl = null;
             if ($errorMessage === '' && is_string($imageUrlInput) && $imageUrlInput !== '') {
                 $trimmed = trim($imageUrlInput);
@@ -97,7 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // ---- Required fields ----
             if ($errorMessage === '') {
                 if ($name === '' || $description === '' || $address === '') {
                     $errorMessage = 'Please fill in all required fields.';
@@ -106,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // ---- Create only on full success ----
             if ($errorMessage === '') {
                 try {
                     $newId = $placeModel->create(
