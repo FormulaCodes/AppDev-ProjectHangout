@@ -1,6 +1,3 @@
-
-
-
 <?php
 
 class Place
@@ -17,6 +14,9 @@ class Place
         string $tagSlug = '',
         bool $includeInactive = false
     ): array {
+    
+        $this->db->exec('SET SESSION group_concat_max_len = 8192');
+
         $sql = "
             SELECT
                 p.id,
@@ -24,6 +24,8 @@ class Place
                 p.description,
                 p.address,
                 p.is_active,
+                p.latitude,
+                p.longitude,
                 GROUP_CONCAT(
                     DISTINCT t.name
                     ORDER BY t.name
@@ -78,7 +80,9 @@ class Place
                 p.name,
                 p.description,
                 p.address,
-                p.is_active
+                p.is_active,
+                p.latitude,
+                p.longitude
             ORDER BY p.name ASC
         ";
 
@@ -149,18 +153,34 @@ class Place
     public function create(
         string $name,
         string $description,
-        string $address
+        string $address,
+        ?float $latitude = null,
+        ?float $longitude = null
     ): int {
         $sql = "
-            INSERT INTO places (name, description, address)
-            VALUES (:name, :description, :address)
+            INSERT INTO places (
+                name,
+                description,
+                address,
+                latitude,
+                longitude
+            )
+            VALUES (
+                :name,
+                :description,
+                :address,
+                :latitude,
+                :longitude
+            )
         ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            'name' => $name,
+            'name'        => $name,
             'description' => $description,
-            'address' => $address
+            'address'     => $address,
+            'latitude'    => $latitude,
+            'longitude'   => $longitude,
         ]);
 
         return (int) $this->db->lastInsertId();
@@ -170,27 +190,32 @@ class Place
         int $id,
         string $name,
         string $description,
-        string $address
+        string $address,
+        ?float $latitude = null,
+        ?float $longitude = null
     ): bool {
         $sql = "
             UPDATE places
             SET name = :name,
                 description = :description,
-                address = :address
+                address = :address,
+                latitude = :latitude,
+                longitude = :longitude
             WHERE id = :id
         ";
 
         $stmt = $this->db->prepare($sql);
 
         return $stmt->execute([
-            'id' => $id,
-            'name' => $name,
+            'id'          => $id,
+            'name'        => $name,
             'description' => $description,
-            'address' => $address
+            'address'     => $address,
+            'latitude'    => $latitude,
+            'longitude'   => $longitude,
         ]);
     }
 
-    // Soft-delete: preserve the place and its related data.
     public function delete(int $id): bool
     {
         $sql = "
@@ -206,7 +231,7 @@ class Place
         return $stmt->rowCount() > 0;
     }
 
-    // Restore a previously deactivated place.
+   
     public function restore(int $id): bool
     {
         $sql = "
@@ -221,4 +246,41 @@ class Place
 
         return $stmt->rowCount() > 0;
     }
-}
+
+        public function setTags(int $placeId, array $tagIds): void
+    {
+       
+        $tagIds = array_values(array_unique(array_map('intval', $tagIds)));
+        $tagIds = array_filter($tagIds, fn($id) => $id > 0);
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare('DELETE FROM place_tags WHERE place_id = :id')
+                     ->execute(['id' => $placeId]);
+
+            if (!empty($tagIds)) {
+                $stmt = $this->db->prepare(
+                    'INSERT INTO place_tags (place_id, tag_id) VALUES (:pid, :tid)'
+                );
+                foreach ($tagIds as $tid) {
+                    $stmt->execute(['pid' => $placeId, 'tid' => $tid]);
+                }
+            }
+
+            $this->db->commit();
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    public function getTagIdsForPlace(int $placeId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT tag_id FROM place_tags WHERE place_id = :id'
+        );
+        $stmt->execute(['id' => $placeId]);
+
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+    }

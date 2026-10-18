@@ -26,6 +26,34 @@ function escape(string $value): string
 
 $placeCount = count($places);
 $hasFilters = $search !== '' || $tagSlug !== '';
+
+
+$mapPlaces = [];
+
+foreach ($places as $place) {
+    $lat = $place['latitude'] ?? null;
+    $lng = $place['longitude'] ?? null;
+
+    if (!is_numeric($lat) || !is_numeric($lng)) {
+        continue;
+    }
+
+    $lat = (float) $lat;
+    $lng = (float) $lng;
+
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        continue;
+    }
+
+    $mapPlaces[] = [
+        'id' => (int) $place['id'],
+        'name' => (string) $place['name'],
+        'address' => (string) $place['address'],
+        'latitude' => $lat,
+        'longitude' => $lng
+    ];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -35,6 +63,12 @@ $hasFilters = $search !== '' || $tagSlug !== '';
     <title>Hangout — Discover Your Next Spot</title>
     <meta name="description" content="Discover places around your campus.">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
 </head>
 <body>
 
@@ -120,6 +154,32 @@ $hasFilters = $search !== '' || $tagSlug !== '';
             <?= $placeCount ?> <?= $placeCount === 1 ? 'place' : 'places' ?> found<?= $hasFilters ? ' for your filters' : '' ?>.
         </p>
 
+        <section class="map-section" aria-labelledby="map-heading">
+            <h2 id="map-heading">Explore on the map</h2>
+
+            
+                <div
+                        id="places-map"
+                        class="places-map"
+                        role="region"
+                        aria-label="Map of places matching your filters"
+                    ></div>
+                <p class="map-attribution-note">
+                    Map data ©
+                    <a href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noopener noreferrer">
+                        OpenStreetMap contributors
+                    </a>
+                </p>
+            <?php if (empty($mapPlaces)): ?>
+                <p>
+                    No places with coordinates match these filters.
+                    You can still explore the places listed below.
+                </p>
+            <?php endif; ?>
+        </section>
+
         <?php if ($placeCount === 0): ?>
             <div class="empty-state">
                 <h2>No places match your search</h2>
@@ -178,5 +238,93 @@ $hasFilters = $search !== '' || $tagSlug !== '';
     </section>
 
 </main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    const places = <?= json_encode(
+        $mapPlaces,
+        JSON_HEX_TAG |
+        JSON_HEX_APOS |
+        JSON_HEX_QUOT |
+        JSON_HEX_AMP
+    ) ?>;
+
+    const mapEl = document.getElementById('places-map');
+    if (!mapEl) return;
+
+    const map = L.map(mapEl);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    }).addTo(map);
+
+    const markers = [];
+
+    places.forEach(place => {
+        const marker = L.marker([
+            place.latitude,
+            place.longitude
+        ]).addTo(map);
+
+        const popup = document.createElement('div');
+
+        const title = document.createElement('strong');
+        title.textContent = place.name;
+        popup.appendChild(title);
+
+        const address = document.createElement('p');
+        address.textContent = place.address;
+        popup.appendChild(address);
+
+        const link = document.createElement('a');
+        link.textContent = 'View place details';
+        link.href = 'place.php?id=' + encodeURIComponent(place.id);
+        popup.appendChild(link);
+
+        marker.bindPopup(popup);
+        markers.push(marker);
+    });
+
+   
+    const CAMPUS_CENTER = [14.490516, 121.055372];
+    const CAMPUS_ZOOM   = 18;
+
+    if (markers.length === 0) {
+        map.setView(CAMPUS_CENTER, CAMPUS_ZOOM);
+    } else if (markers.length === 1) {
+        map.setView(markers[0].getLatLng(), CAMPUS_ZOOM);
+    } else {
+        const bounds = L.featureGroup(markers).getBounds();
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+    }
+
+    // Always attach click handler — regardless of marker count
+    map.on('click', (e) => {
+        const lat = e.latlng.lat.toFixed(6);
+        const lng = e.latlng.lng.toFixed(6);
+
+        const popup = document.createElement('div');
+        popup.innerHTML = `
+            <p style="margin:0 0 6px;font-weight:600;">Suggest a place here?</p>
+            <p style="margin:0 0 8px;font-size:0.9em;color:#555;">
+                ${lat}, ${lng}
+            </p>
+        `;
+        const link = document.createElement('a');
+        link.textContent = 'Open suggestion form →';
+        link.href = 'suggest-place.php?lat=' + encodeURIComponent(lat)
+                  + '&lng=' + encodeURIComponent(lng);
+        popup.appendChild(link);
+
+        L.popup()
+            .setLatLng(e.latlng)
+            .setContent(popup)
+            .openOn(map);
+    });
+})();
+</script>
+
 </body>
 </html>

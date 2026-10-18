@@ -66,6 +66,7 @@ foreach ($users as $u) {
         <nav class="admin-nav" aria-label="Admin sections">
             <a href="index.php" class="admin-nav__link">Dashboard</a>
             <a href="places.php" class="admin-nav__link">Places</a>
+             <a href="suggestions.php" class="admin-nav__link">Suggestions</a>
             <a href="reviews.php" class="admin-nav__link">Reviews</a>
             <a href="users.php" class="admin-nav__link is-active" aria-current="page">Users</a>
             <a href="../index.php" class="btn btn--ghost">View site</a>

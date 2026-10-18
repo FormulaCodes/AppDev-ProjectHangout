@@ -143,9 +143,11 @@ $hasFilters = $search !== '' || $placeId !== null || $status !== 'all' || $ratin
         </div>
 
         <nav class="admin-nav" aria-label="Admin sections">
-            <a href="index.php" class="admin-nav__link">Dashboard</a>
+           <a href="index.php" class="admin-nav__link is-active" aria-current="page">Dashboard</a>
             <a href="places.php" class="admin-nav__link">Places</a>
-            <a href="reviews.php" class="admin-nav__link is-active" aria-current="page">Reviews</a>
+            <a href="tags.php" class="admin-nav__link">Tags</a>
+            <a href="suggestions.php" class="admin-nav__link">Suggestions</a>
+            <a href="reviews.php" class="admin-nav__link">Reviews</a>
             <a href="users.php" class="admin-nav__link">Users</a>
             <a href="../index.php" class="btn btn--ghost">View site</a>
         </nav>
