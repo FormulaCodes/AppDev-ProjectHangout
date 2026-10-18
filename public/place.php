@@ -168,6 +168,15 @@ $isLoggedIn = isset($_SESSION['user_id']);
         <header class="place-detail__header">
             <h1 id="place-title"><?= escape($place['name']) ?></h1>
 
+            <?php if (!empty($place['image_url'])): ?>
+                <figure class="place-detail__figure">
+                    <img
+                        src="<?= escape($place['image_url']) ?>"
+                        alt="Photo of <?= escape($place['name']) ?>"
+                        loading="lazy"
+                    >
+                </figure>
+            <?php endif; ?>
             <?php if (!empty($summary['total_reviews']) && $summary['total_reviews'] > 0): ?>
                 <p class="place-detail__rating">
                     <span class="rating-stars" aria-hidden="true">★</span>

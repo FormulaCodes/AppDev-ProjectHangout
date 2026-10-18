@@ -52,17 +52,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'The place could not be restored. It may already be active or no longer exist.';
             }
         } elseif ($action === 'add') {
+            // ---- Read inputs ----
             $nameInput        = $_POST['name'] ?? '';
             $descriptionInput = $_POST['description'] ?? '';
             $addressInput     = $_POST['address'] ?? '';
             $latInput         = $_POST['latitude'] ?? '';
             $lngInput         = $_POST['longitude'] ?? '';
+            $imageUrlInput    = $_POST['image_url'] ?? '';
 
             $name        = is_string($nameInput) ? trim($nameInput) : '';
             $description = is_string($descriptionInput) ? trim($descriptionInput) : '';
             $address     = is_string($addressInput) ? trim($addressInput) : '';
 
-            // Coordinates are optional but must be valid if present
+            // ---- Coordinates (optional) ----
             $latitude  = null;
             $longitude = null;
 
@@ -80,20 +82,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if ($errorMessage !== '') {
-                // fall through to display
-            } elseif ($name === '' || $description === '' || $address === '') {
-                $errorMessage = 'Please fill in all required fields.';
-            } elseif (mb_strlen($name) > 150 || mb_strlen($address) > 255) {
-                $errorMessage = 'The place name or address is too long.';
-            } else {
+            // ---- Image URL (optional, must be http/https) ----
+            $imageUrl = null;
+            if ($errorMessage === '' && is_string($imageUrlInput) && $imageUrlInput !== '') {
+                $trimmed = trim($imageUrlInput);
+                if (strlen($trimmed) > 500) {
+                    $errorMessage = 'Image URL is too long.';
+                } elseif (!filter_var($trimmed, FILTER_VALIDATE_URL)) {
+                    $errorMessage = 'Image URL must be a valid URL.';
+                } elseif (!preg_match('#^https?://#i', $trimmed)) {
+                    $errorMessage = 'Image URL must start with http:// or https://.';
+                } else {
+                    $imageUrl = $trimmed;
+                }
+            }
+
+            // ---- Required fields ----
+            if ($errorMessage === '') {
+                if ($name === '' || $description === '' || $address === '') {
+                    $errorMessage = 'Please fill in all required fields.';
+                } elseif (mb_strlen($name) > 150 || mb_strlen($address) > 255) {
+                    $errorMessage = 'The place name or address is too long.';
+                }
+            }
+
+            // ---- Create only on full success ----
+            if ($errorMessage === '') {
                 try {
                     $newId = $placeModel->create(
                         $name,
                         $description,
                         $address,
                         $latitude,
-                        $longitude
+                        $longitude,
+                        $imageUrl
                     );
 
                     $tagIds = $_POST['tags'] ?? [];
@@ -147,7 +169,6 @@ foreach ($places as $p) {
     }
 }
 
-// Default map center — change to your campus
 $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
 ?>
 <!DOCTYPE html>
@@ -233,7 +254,7 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
             <h2 id="add-place-heading">Add a New Place</h2>
             <p class="panel__hint">
                 Required: name, address, description.
-                Optional: tags and coordinates.
+                Optional: tags, image, coordinates.
             </p>
         </header>
 
@@ -275,6 +296,20 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
                     rows="4"
                     required
                 ></textarea>
+            </div>
+
+            <div class="field">
+                <label for="image_url">Image URL <span class="label-hint">(optional)</span></label>
+                <input
+                    type="url"
+                    id="image_url"
+                    name="image_url"
+                    maxlength="500"
+                    placeholder="https://example.com/photo.jpg"
+                >
+                <span class="field-hint">
+                    Paste a direct link to an image (Unsplash, Imgur, etc.).
+                </span>
             </div>
 
             <fieldset class="tag-fieldset">
@@ -356,6 +391,7 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
                 <table class="data-table">
                     <thead>
                         <tr>
+                            <th scope="col"><span class="visually-hidden">Thumbnail</span></th>
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
                             <th scope="col">Address</th>
@@ -369,6 +405,19 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
                         <?php foreach ($places as $place): ?>
                             <?php $isActive = (int) $place['is_active'] === 1; ?>
                             <tr class="<?= $isActive ? '' : 'is-muted' ?>">
+                                <td>
+                                    <?php if (!empty($place['image_url'])): ?>
+                                        <img
+                                            src="<?= escape($place['image_url']) ?>"
+                                            alt=""
+                                            class="table-thumb"
+                                            loading="lazy"
+                                        >
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
+
                                 <td class="data-table__id"><?= (int) $place['id'] ?></td>
 
                                 <td><strong><?= escape($place['name']) ?></strong></td>
@@ -503,7 +552,6 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
         lngInput.value = parseFloat(lng).toFixed(6);
     }
 
-    // If inputs already have values (e.g. re-rendered after error), place marker
     if (latInput.value && lngInput.value) {
         const lat = parseFloat(latInput.value);
         const lng = parseFloat(lngInput.value);
@@ -512,12 +560,10 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
         }
     }
 
-    // Click anywhere on the map to set the pin
     map.on('click', (e) => {
         setMarker(e.latlng.lat, e.latlng.lng, false);
     });
 
-    // Typing directly into the inputs also updates the marker
     function onInputChange() {
         const lat = parseFloat(latInput.value);
         const lng = parseFloat(lngInput.value);
@@ -533,4 +579,4 @@ $CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
 </script>
 
 </body>
-</html>
+</html>s

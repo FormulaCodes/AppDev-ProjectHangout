@@ -14,7 +14,6 @@ class Place
         string $tagSlug = '',
         bool $includeInactive = false
     ): array {
-    
         $this->db->exec('SET SESSION group_concat_max_len = 8192');
 
         $sql = "
@@ -26,6 +25,7 @@ class Place
                 p.is_active,
                 p.latitude,
                 p.longitude,
+                p.image_url,
                 GROUP_CONCAT(
                     DISTINCT t.name
                     ORDER BY t.name
@@ -82,7 +82,8 @@ class Place
                 p.address,
                 p.is_active,
                 p.latitude,
-                p.longitude
+                p.longitude,
+                p.image_url
             ORDER BY p.name ASC
         ";
 
@@ -116,6 +117,7 @@ class Place
                 p.latitude,
                 p.longitude,
                 p.is_active,
+                p.image_url,
                 GROUP_CONCAT(
                     DISTINCT t.name
                     ORDER BY t.name
@@ -139,7 +141,8 @@ class Place
                 p.address,
                 p.latitude,
                 p.longitude,
-                p.is_active
+                p.is_active,
+                p.image_url
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -155,7 +158,8 @@ class Place
         string $description,
         string $address,
         ?float $latitude = null,
-        ?float $longitude = null
+        ?float $longitude = null,
+        ?string $imageUrl = null
     ): int {
         $sql = "
             INSERT INTO places (
@@ -163,14 +167,16 @@ class Place
                 description,
                 address,
                 latitude,
-                longitude
+                longitude,
+                image_url
             )
             VALUES (
                 :name,
                 :description,
                 :address,
                 :latitude,
-                :longitude
+                :longitude,
+                :image_url
             )
         ";
 
@@ -181,6 +187,7 @@ class Place
             'address'     => $address,
             'latitude'    => $latitude,
             'longitude'   => $longitude,
+            'image_url'   => $imageUrl,
         ]);
 
         return (int) $this->db->lastInsertId();
@@ -192,7 +199,8 @@ class Place
         string $description,
         string $address,
         ?float $latitude = null,
-        ?float $longitude = null
+        ?float $longitude = null,
+        ?string $imageUrl = null
     ): bool {
         $sql = "
             UPDATE places
@@ -200,7 +208,8 @@ class Place
                 description = :description,
                 address = :address,
                 latitude = :latitude,
-                longitude = :longitude
+                longitude = :longitude,
+                image_url = :image_url
             WHERE id = :id
         ";
 
@@ -213,6 +222,7 @@ class Place
             'address'     => $address,
             'latitude'    => $latitude,
             'longitude'   => $longitude,
+            'image_url'   => $imageUrl,
         ]);
     }
 
@@ -231,7 +241,6 @@ class Place
         return $stmt->rowCount() > 0;
     }
 
-   
     public function restore(int $id): bool
     {
         $sql = "
@@ -247,9 +256,8 @@ class Place
         return $stmt->rowCount() > 0;
     }
 
-        public function setTags(int $placeId, array $tagIds): void
+    public function setTags(int $placeId, array $tagIds): void
     {
-       
         $tagIds = array_values(array_unique(array_map('intval', $tagIds)));
         $tagIds = array_filter($tagIds, fn($id) => $id > 0);
 
@@ -283,4 +291,4 @@ class Place
 
         return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
-    }
+}

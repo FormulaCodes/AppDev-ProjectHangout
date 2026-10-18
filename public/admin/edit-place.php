@@ -23,17 +23,17 @@ function escapeValue($value): string
     );
 }
 
-// ---- Read ID first, before anything else uses it ----
+// ---- Read ID first ----
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id || $id < 1) {
     http_response_code(400);
     exit('Invalid place ID.');
 }
 
-// ---- Instantiate model, then load data ----
+// ---- Instantiate model, load data ----
 $placeModel = new Place($pdo);
 
-$place = $placeModel->getById($id, true); // includeInactive=true so we can edit inactive places too
+$place = $placeModel->getById($id, true);
 if (!$place) {
     http_response_code(404);
     exit('Place not found.');
@@ -56,17 +56,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim((string) ($_POST['description'] ?? ''));
     $address     = trim((string) ($_POST['address'] ?? ''));
 
-    // Preserve existing coordinates (form doesn't edit them yet)
-    $latitude  = $place['latitude']  !== null ? (float) $place['latitude']  : null;
-    $longitude = $place['longitude'] !== null ? (float) $place['longitude'] : null;
+    // Coordinates — optional
+    $latInput = $_POST['latitude']  ?? '';
+    $lngInput = $_POST['longitude'] ?? '';
 
-    if ($name === '' || $description === '' || $address === '') {
-        $errorMessage = 'Please fill in all fields.';
-    } elseif (mb_strlen($name) > 150 || mb_strlen($address) > 255) {
-        $errorMessage = 'Name or address is too long.';
-    } else {
+    $latitude  = null;
+    $longitude = null;
+
+    if (is_string($latInput) && $latInput !== '' && is_numeric($latInput)) {
+        $latitude = (float) $latInput;
+        if ($latitude < -90 || $latitude > 90) {
+            $errorMessage = 'Latitude must be between -90 and 90.';
+        }
+    }
+    if ($errorMessage === '' && is_string($lngInput) && $lngInput !== '' && is_numeric($lngInput)) {
+        $longitude = (float) $lngInput;
+        if ($longitude < -180 || $longitude > 180) {
+            $errorMessage = 'Longitude must be between -180 and 180.';
+        }
+    }
+
+    // Image URL — preserve existing if blank, clear if "remove_image" checked
+    $imageUrlInput  = $_POST['image_url'] ?? '';
+    $removeImage    = isset($_POST['remove_image']);
+    $existingImage  = $place['image_url'] ?? null;
+
+    $imageUrl = $existingImage;
+
+    if ($removeImage) {
+        $imageUrl = null;
+    } elseif (is_string($imageUrlInput) && trim($imageUrlInput) !== '') {
+        $trimmed = trim($imageUrlInput);
+        if (strlen($trimmed) > 500) {
+            $errorMessage = 'Image URL is too long.';
+        } elseif (!filter_var($trimmed, FILTER_VALIDATE_URL)) {
+            $errorMessage = 'Image URL must be a valid URL.';
+        } elseif (!preg_match('#^https?://#i', $trimmed)) {
+            $errorMessage = 'Image URL must start with http:// or https://.';
+        } else {
+            $imageUrl = $trimmed;
+        }
+    }
+
+    // Required fields
+    if ($errorMessage === '') {
+        if ($name === '' || $description === '' || $address === '') {
+            $errorMessage = 'Please fill in all required fields.';
+        } elseif (mb_strlen($name) > 150 || mb_strlen($address) > 255) {
+            $errorMessage = 'Name or address is too long.';
+        }
+    }
+
+    if ($errorMessage === '') {
         try {
-            $placeModel->update($id, $name, $description, $address, $latitude, $longitude);
+            $placeModel->update(
+                $id,
+                $name,
+                $description,
+                $address,
+                $latitude,
+                $longitude,
+                $imageUrl
+            );
 
             $submittedTags = $_POST['tags'] ?? [];
             if (!is_array($submittedTags)) {
@@ -87,12 +138,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Repopulate form fields on error
+    // Repopulate form on error
     $place['name']        = $name;
     $place['description'] = $description;
     $place['address']     = $address;
+    $place['latitude']    = $latitude;
+    $place['longitude']   = $longitude;
+    $place['image_url']   = $imageUrl;
     $currentTagIds        = $submittedTags ?? [];
 }
+
+$CAMPUS_CENTER = ['lat' => 14.490516, 'lng' => 121.055372];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -100,6 +156,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Edit Place | Hangout Admin</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="admin-body">
@@ -191,6 +254,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ><?= escapeValue($place['description']) ?></textarea>
             </div>
 
+            <fieldset class="image-fieldset">
+                <legend>Image <span class="label-hint">(optional)</span></legend>
+
+                <?php if (!empty($place['image_url'])): ?>
+                    <div class="current-image">
+                        <img
+                            src="<?= escapeValue($place['image_url']) ?>"
+                            alt="Current image for <?= escapeValue($place['name']) ?>"
+                            class="current-image__img"
+                            loading="lazy"
+                        >
+                        <label class="current-image__remove">
+                            <input
+                                type="checkbox"
+                                name="remove_image"
+                                value="1"
+                            >
+                            Remove this image
+                        </label>
+                    </div>
+                <?php endif; ?>
+
+                <div class="field">
+                    <label for="image_url">
+                        <?= !empty($place['image_url']) ? 'Replace with a new URL' : 'Image URL' ?>
+                    </label>
+                    <input
+                        type="url"
+                        id="image_url"
+                        name="image_url"
+                        maxlength="500"
+                        value="<?= escapeValue($_POST['image_url'] ?? '') ?>"
+                        placeholder="https://example.com/photo.jpg"
+                    >
+                    <span class="field-hint">
+                        Paste a direct image link (Unsplash, Imgur, etc.).
+                        Leave blank to keep the current image.
+                    </span>
+                </div>
+            </fieldset>
+
             <fieldset class="tag-fieldset">
                 <legend>Tags <span class="label-hint">(optional)</span></legend>
 
@@ -215,16 +319,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
             </fieldset>
 
-            <?php if (
-                $place['latitude'] !== null
-                && $place['longitude'] !== null
-            ): ?>
+            <fieldset class="coords-fieldset">
+                <legend>Location on the map <span class="label-hint">(optional)</span></legend>
                 <p class="field-hint">
-                    Coordinates preserved:
-                    <?= escapeValue((string) $place['latitude']) ?>,
-                    <?= escapeValue((string) $place['longitude']) ?>
+                    Click the map to move the pin, drag it, or type coordinates.
                 </p>
-            <?php endif; ?>
+
+                <div class="coords-row">
+                    <div class="field">
+                        <label for="latitude">Latitude</label>
+                        <input
+                            type="number"
+                            id="latitude"
+                            name="latitude"
+                            step="any"
+                            min="-90"
+                            max="90"
+                            value="<?= $place['latitude'] !== null ? escapeValue((string) $place['latitude']) : '' ?>"
+                            placeholder="e.g. 14.490516"
+                        >
+                    </div>
+                    <div class="field">
+                        <label for="longitude">Longitude</label>
+                        <input
+                            type="number"
+                            id="longitude"
+                            name="longitude"
+                            step="any"
+                            min="-180"
+                            max="180"
+                            value="<?= $place['longitude'] !== null ? escapeValue((string) $place['longitude']) : '' ?>"
+                            placeholder="e.g. 121.055372"
+                        >
+                    </div>
+                </div>
+
+                <div id="edit-place-map" class="places-map places-map--compact"></div>
+            </fieldset>
 
             <div class="form-actions">
                 <button type="submit" class="btn btn--solid">Save Changes</button>
@@ -234,5 +365,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </section>
 
 </main>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+(function () {
+    const CAMPUS = [<?= (float) $CAMPUS_CENTER['lat'] ?>, <?= (float) $CAMPUS_CENTER['lng'] ?>];
+    const mapEl = document.getElementById('edit-place-map');
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+    if (!mapEl || !latInput || !lngInput) return;
+
+    const map = L.map(mapEl).setView(CAMPUS, 15);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    }).addTo(map);
+
+    let marker = null;
+
+    function setMarker(lat, lng, moveView) {
+        const latFixed = parseFloat(lat).toFixed(6);
+        const lngFixed = parseFloat(lng).toFixed(6);
+
+        if (marker) {
+            marker.setLatLng([latFixed, lngFixed]);
+        } else {
+            marker = L.marker([latFixed, lngFixed], { draggable: true }).addTo(map);
+            marker.on('dragend', () => {
+                const p = marker.getLatLng();
+                syncInputs(p.lat, p.lng);
+            });
+        }
+
+        syncInputs(latFixed, lngFixed);
+
+        if (moveView) {
+            map.setView([latFixed, lngFixed], Math.max(map.getZoom(), 16));
+        }
+    }
+
+    function syncInputs(lat, lng) {
+        latInput.value = parseFloat(lat).toFixed(6);
+        lngInput.value = parseFloat(lng).toFixed(6);
+    }
+
+    if (latInput.value && lngInput.value) {
+        const lat = parseFloat(latInput.value);
+        const lng = parseFloat(lngInput.value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            setMarker(lat, lng, true);
+        }
+    }
+
+    map.on('click', (e) => {
+        setMarker(e.latlng.lat, e.latlng.lng, false);
+    });
+
+    function onInputChange() {
+        const lat = parseFloat(latInput.value);
+        const lng = parseFloat(lngInput.value);
+        if (!isNaN(lat) && !isNaN(lng)
+            && lat >= -90 && lat <= 90
+            && lng >= -180 && lng <= 180) {
+            setMarker(lat, lng, false);
+        }
+    }
+    latInput.addEventListener('change', onInputChange);
+    lngInput.addEventListener('change', onInputChange);
+})();
+</script>
+
 </body>
 </html>

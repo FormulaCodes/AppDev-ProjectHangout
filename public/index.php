@@ -210,6 +210,16 @@ foreach ($places as $place) {
                                 </h2>
                             </header>
 
+                            <?php if (!empty($place['image_url'])): ?>
+                                <div class="place-card__image">
+                                    <img
+                                        src="<?= escape($place['image_url']) ?>"
+                                        alt=""
+                                        loading="lazy"
+                                    >
+                                </div>
+                            <?php endif; ?>
+                            
                             <?php if (!empty($place['description'])): ?>
                                 <p class="place-card__desc">
                                     <?= escape($place['description']) ?>
