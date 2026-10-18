@@ -31,6 +31,9 @@ function escape(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
+
+$showForm = ($result === null || !$result['success']);
+$isError  = ($result !== null && !$result['success']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -41,81 +44,110 @@ function escape(string $value): string
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<header>
-    <h1>Hangout</h1>
-    <p>Join your campus community.</p>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+    <div class="site-header__inner">
+        <div class="brand">
+            <a href="index.php" class="brand__name">Hangout</a>
+            <p class="brand__tagline">Join your campus community.</p>
+        </div>
+    </div>
 </header>
 
-<main>
-    <section class="place-detail">
-        <h2>Create an Account</h2>
+<main id="main" class="container container--narrow">
 
-        <?php if ($result !== null && !$result['success']): ?>
-            <ul>
-                <?php foreach ($result['errors'] as $error): ?>
-                    <li><?= escape($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
+    <section class="auth-card" aria-labelledby="register-heading">
+        <header class="auth-card__header">
+            <h1 id="register-heading">Create an Account</h1>
+            <p class="auth-card__subtitle">Share your favorite places and help other students find theirs.</p>
+        </header>
+
+        <?php if ($isError): ?>
+            <div class="alert alert--error" role="alert">
+                <p><strong>Please fix the following:</strong></p>
+                <ul>
+                    <?php foreach ($result['errors'] as $error): ?>
+                        <li><?= escape($error) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
         <?php elseif ($result !== null && $result['success']): ?>
-            <p><?= escape($result['message']) ?></p>
-            <p><a href="login.php">Continue to login</a></p>
+            <div class="alert alert--success" role="status">
+                <?= escape($result['message']) ?>
+            </div>
+            <p><a href="login.php" class="btn btn--solid btn--block">Continue to login</a></p>
         <?php endif; ?>
 
-        <?php if ($result === null || !$result['success']): ?>
-            <form method="POST" action="register.php" class="search-form">
+        <?php if ($showForm): ?>
+            <form method="POST" action="register.php" class="auth-form">
                 <input
                     type="hidden"
                     name="csrf_token"
                     value="<?= escape($_SESSION['csrf_token']) ?>"
                 >
 
-                <label for="username">Username</label>
-                <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    minlength="3"
-                    maxlength="50"
-                    autocomplete="username"
-                    required
-                >
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        minlength="3"
+                        maxlength="50"
+                        autocomplete="username"
+                        required
+                    >
+                    <span class="field-hint">3–50 characters.</span>
+                </div>
 
-                <label for="email">Email</label>
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    maxlength="255"
-                    autocomplete="email"
-                    required
-                >
+                <div class="field">
+                    <label for="email">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        maxlength="255"
+                        autocomplete="email"
+                        required
+                    >
+                </div>
 
-                <label for="password">Password</label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    minlength="8"
-                    autocomplete="new-password"
-                    required
-                >
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        minlength="8"
+                        autocomplete="new-password"
+                        required
+                    >
+                    <span class="field-hint">At least 8 characters.</span>
+                </div>
 
-                <label for="confirm_password">Confirm Password</label>
-                <input
-                    type="password"
-                    id="confirm_password"
-                    name="confirm_password"
-                    minlength="8"
-                    autocomplete="new-password"
-                    required
-                >
+                <div class="field">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input
+                        type="password"
+                        id="confirm_password"
+                        name="confirm_password"
+                        minlength="8"
+                        autocomplete="new-password"
+                        required
+                    >
+                </div>
 
-                <button type="submit">Create Account</button>
+                <button type="submit" class="btn btn--solid btn--block">Create Account</button>
             </form>
         <?php endif; ?>
 
-        <p><a href="index.php">Back to Hangout</a></p>
+        <footer class="auth-card__footer">
+            <p><a href="index.php" class="link-muted">← Back to Hangout</a></p>
+        </footer>
     </section>
+
 </main>
 </body>
 </html>

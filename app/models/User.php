@@ -80,5 +80,45 @@ class User
 
         return $user;
     }
+    
+    public function getAll(
+        string $search = '',
+        string $role = 'all'
+    ): array {
+        $sql = "
+            SELECT id, username, email, role, created_at
+            FROM users
+            WHERE 1 = 1
+        ";
+
+        $params = [];
+
+        if (trim($search) !== '') {
+            $sql .= "
+                AND (
+                    username LIKE :username_search
+                    OR email LIKE :email_search
+                )
+            ";
+
+            $term = '%' . trim($search) . '%';
+
+            $params['username_search'] = $term;
+            $params['email_search'] = $term;
+        }
+
+        if (in_array($role, ['user', 'admin'], true)) {
+            $sql .= " AND role = :role";
+            $params['role'] = $role;
+        }
+
+        $sql .= " ORDER BY id DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
 
 }

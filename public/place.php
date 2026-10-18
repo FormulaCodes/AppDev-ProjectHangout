@@ -1,4 +1,3 @@
-
 <?php
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -29,7 +28,6 @@ if ($place === null) {
     exit('Place not found.');
 }
 
-
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -43,7 +41,7 @@ $reviewMessage = '';
 $reviewMessageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+
     if (!isset($_SESSION['user_id'])) {
         header('Location: login.php');
         exit;
@@ -85,7 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $comment === '' ? null : $comment
                 );
 
-            
                 header(
                     'Location: place.php?id=' . $id . '&review=success'
                 );
@@ -103,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $reviewMessageType = 'error';
             } catch (InvalidArgumentException $e) {
-                $reviewMessage = 'Please select a valid rating.';
+                $reviewMessage = $e->getMessage();
                 $reviewMessageType = 'error';
             }
         }
@@ -112,7 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['review']) && $_GET['review'] === 'success') {
     $reviewMessage = 'Your review has been submitted successfully!';
-    $reviewMessageType = 'success';     }
+    $reviewMessageType = 'success';
+}
 
 if (isset($_SESSION['user_id'])) {
     $userHasReviewed = $reviewModel->hasUserReviewed(
@@ -125,8 +123,9 @@ $tags = $place['tags'] !== null
     ? explode(', ', $place['tags'])
     : [];
 
+$hasCoords = $place['latitude'] !== null && $place['longitude'] !== null;
+$isLoggedIn = isset($_SESSION['user_id']);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -137,166 +136,218 @@ $tags = $place['tags'] !== null
 </head>
 <body>
 
-    <header>
-        <h1>Hangout</h1>
-        <p>Discover places around your campus.</p>
-    </header>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <main>
-        <p><a href="index.php">← Back to Explore Places</a></p>
-
-        <article class="place-detail">
-            <h2><?= escape($place['name']) ?></h2>
-
-            <p><?= nl2br(escape($place['description'] ?? 'No description available yet.')) ?></p>
-
-            <h3>Address</h3>
-            <p><?= escape($place['address']) ?></p>
-
-            <h3>Tags</h3>
-
-            <?php if (empty($tags)): ?>
-                <p>No tags available.</p>
+<header class="site-header">
+    <div class="site-header__inner">
+        <div class="brand">
+            <a href="index.php" class="brand__name">Hangout</a>
+            <p class="brand__tagline">Discover places around your campus.</p>
+        </div>
+        <nav class="auth-nav" aria-label="Account">
+            <?php if ($isLoggedIn): ?>
+                <span class="auth-nav__welcome">
+                    Welcome, <?= escape((string) $_SESSION['username']) ?>
+                </span>
             <?php else: ?>
-                <div class="tag-list">
-                    <?php foreach ($tags as $tag): ?>
-                        <span class="tag">
-                            <?= escape($tag) ?>
-                        </span>
-                    <?php endforeach; ?>
-                </div>
+                <a class="btn btn--ghost" href="login.php">Login</a>
+                <a class="btn btn--solid" href="register.php">Register</a>
             <?php endif; ?>
+        </nav>
+    </div>
+</header>
 
-            <h3>Location coordinates</h3>
+<main id="main" class="container">
 
-            <?php if (
-                $place['latitude'] !== null
-                && $place['longitude'] !== null
-            ): ?>
-                <p>
-                    Latitude: <?= escape((string) $place['latitude']) ?><br>
-                    Longitude: <?= escape((string) $place['longitude']) ?>
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.php">← Back to Explore Places</a>
+    </nav>
+
+    <article class="place-detail" aria-labelledby="place-title">
+
+        <header class="place-detail__header">
+            <h1 id="place-title"><?= escape($place['name']) ?></h1>
+
+            <?php if (!empty($summary['total_reviews']) && $summary['total_reviews'] > 0): ?>
+                <p class="place-detail__rating">
+                    <span class="rating-stars" aria-hidden="true">★</span>
+                    <strong><?= number_format($summary['average_rating'], 1) ?> / 5</strong>
+                    <span class="place-detail__rating-count">
+                        (<?= (int) $summary['total_reviews'] ?>
+                        <?= $summary['total_reviews'] === 1 ? 'review' : 'reviews' ?>)
+                    </span>
                 </p>
-            <?php else: ?>
-                <p>Location coordinates have not been added yet.</p>
             <?php endif; ?>
-        </article>
-        
-        <section class="reviews-section">
-            <h2>Ratings and Reviews</h2>
+        </header>
 
-           <div class="review-summary">
-    <?php if ($summary['total_reviews'] > 0): ?>
-        <strong>
-            <?= number_format($summary['average_rating'], 1) ?> / 5
-        </strong>
+        <p class="place-detail__description">
+            <?= nl2br(escape($place['description'] ?? 'No description available yet.')) ?>
+        </p>
 
-        <span>
-            (<?= $summary['total_reviews'] ?>
-            <?= $summary['total_reviews'] === 1 ? 'review' : 'reviews' ?>)
-        </span>
-    <?php else: ?>
-        <strong>No ratings yet</strong>
-        <span>Be the first to review this place.</span>
-    <?php endif; ?>
+        <div class="place-detail__meta">
+
+            <section class="detail-block" aria-labelledby="detail-address">
+                <h2 id="detail-address" class="detail-block__label">Address</h2>
+                <p><?= escape($place['address']) ?></p>
+            </section>
+
+            <section class="detail-block" aria-labelledby="detail-tags">
+                <h2 id="detail-tags" class="detail-block__label">Tags</h2>
+                <?php if (empty($tags)): ?>
+                    <p class="text-muted">No tags available.</p>
+                <?php else: ?>
+                    <div class="tag-list">
+                        <?php foreach ($tags as $tag): ?>
+                            <span class="tag"><?= escape($tag) ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="detail-block" aria-labelledby="detail-coords">
+                <h2 id="detail-coords" class="detail-block__label">Location</h2>
+                <?php if ($hasCoords): ?>
+                    <p class="coords">
+                        <span><span class="coords__key">Lat:</span> <?= escape((string) $place['latitude']) ?></span>
+                        <span><span class="coords__key">Lng:</span> <?= escape((string) $place['longitude']) ?></span>
+                    </p>
+                <?php else: ?>
+                    <p class="text-muted">Location coordinates have not been added yet.</p>
+                <?php endif; ?>
+            </section>
+
+        </div>
+    </article>
+
+    <section class="reviews-section" aria-labelledby="reviews-heading">
+        <header class="reviews-section__header">
+            <h2 id="reviews-heading">Ratings and Reviews</h2>
+
+            <div class="review-summary">
+                <?php if ($summary['total_reviews'] > 0): ?>
+                    <p class="review-summary__score">
+                        <span class="review-summary__avg"><?= number_format($summary['average_rating'], 1) ?></span>
+                        <span class="review-summary__max">/ 5</span>
+                    </p>
+                    <p class="review-summary__count">
+                        <?= (int) $summary['total_reviews'] ?>
+                        <?= $summary['total_reviews'] === 1 ? 'review' : 'reviews' ?>
+                    </p>
+                <?php else: ?>
+                    <p class="review-summary__score"><strong>No ratings yet</strong></p>
+                    <p class="review-summary__count">Be the first to review this place.</p>
+                <?php endif; ?>
             </div>
+        </header>
 
-            <?php if (empty($reviews)): ?>
+        <?php if (empty($reviews)): ?>
+            <div class="empty-state">
+                <h3>No reviews yet</h3>
                 <p>There are no comments for this place yet.</p>
-            <?php else: ?>
-                <div class="reviews-list">
-                    <?php foreach ($reviews as $review): ?>
-                        <article class="review-card">
-                            <div class="review-card-header">
-                                <strong>
-                                    <?= escape($review['username']) ?>
-                                </strong>
+            </div>
+        <?php else: ?>
+            <div class="reviews-list">
+                <?php foreach ($reviews as $review): ?>
+                    <article class="review-card">
+                        <header class="review-card-header">
+                            <strong class="review-card__author">
+                                <?= escape($review['username']) ?>
+                            </strong>
+                            <span class="review-card__rating" aria-label="<?= (int) $review['rating'] ?> out of 5">
+                                <?= (int) $review['rating'] ?> / 5
+                            </span>
+                        </header>
 
-                                <span>
-                                    <?= (int) $review['rating'] ?> / 5
-                                </span>
-                            </div>
+                        <?php if (
+                            $review['comment'] !== null &&
+                            trim($review['comment']) !== ''
+                        ): ?>
+                            <p class="review-card__comment">
+                                <?= nl2br(escape($review['comment'])) ?>
+                            </p>
+                        <?php else: ?>
+                            <p class="review-no-comment">No written comment.</p>
+                        <?php endif; ?>
 
-                            <?php if (
-                                $review['comment'] !== null &&
-                                trim($review['comment']) !== ''
-                            ): ?>
-                                <p>
-                                    <?= nl2br(escape($review['comment'])) ?>
-                                </p>
-                            <?php else: ?>
-                                <p class="review-no-comment">
-                                    No written comment.
-                                </p>
-                            <?php endif; ?>
+                        <footer class="review-card__footer">
+                            <small><?= escape($review['created_at']) ?></small>
+                        </footer>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
-                            <small>
-                                <?= escape($review['created_at']) ?>
-                            </small>
-                        </article>
-                    <?php endforeach; ?>
+        <div class="review-form-section" id="review-form">
+            <h3>Share Your Experience</h3>
+
+            <?php if ($reviewMessage !== ''): ?>
+                <div
+                    role="status"
+                    class="alert alert--<?= $reviewMessageType === 'success' ? 'success' : 'error' ?>"
+                >
+                    <?= escape($reviewMessage) ?>
                 </div>
             <?php endif; ?>
-            
-                <div class="review-form-section">
-                    <h3>Share Your Experience</h3>
 
-                    <?php if ($reviewMessage !== ''): ?>
-                        <p role="status" class="review-message">
-                            <?= escape($reviewMessage) ?>
-                        </p>
-                    <?php endif; ?>
+            <?php if (!$isLoggedIn): ?>
+                <p class="text-muted">
+                    Please <a href="login.php">log in</a> to leave a review.
+                </p>
 
-                    <?php if (!isset($_SESSION['user_id'])): ?>
-                        <p>
-                            Please <a href="login.php">log in</a>
-                            to leave a review.
-                        </p>
+            <?php elseif ($userHasReviewed): ?>
+                <p class="text-muted">
+                    You have already reviewed this place. Thanks for sharing!
+                </p>
 
-                    <?php elseif ($userHasReviewed): ?>
-                        <p>You have already reviewed this place. Thanks for sharing!</p>
+            <?php else: ?>
+                <form
+                    method="POST"
+                    action="place.php?id=<?= (int) $id ?>"
+                    class="review-form"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= escape($_SESSION['csrf_token']) ?>"
+                    >
 
-                    <?php else: ?>
-                        <form method="POST" action="place.php?id=<?= $id ?>"
-                            class="search-form">
-
-                            <input
-                                type="hidden"
-                                name="csrf_token"
-                                value="<?= escape($_SESSION['csrf_token']) ?>"
-                            >
-
-                            <label>Rating</label>
-
+                    <fieldset class="rating-fieldset">
+                        <legend>Rating</legend>
+                        <div class="rating-input">
                             <?php for ($score = 1; $score <= 5; $score++): ?>
-                                <label>
+                                <label class="rating-input__option">
                                     <input
                                         type="radio"
                                         name="rating"
                                         value="<?= $score ?>"
                                         required
                                     >
-                                    <?= $score ?> / 5
+                                    <span class="rating-input__label">
+                                        <span class="rating-input__num"><?= $score ?></span>
+                                        <span class="rating-input__max">/5</span>
+                                    </span>
                                 </label>
                             <?php endfor; ?>
+                        </div>
+                    </fieldset>
 
-                            <label for="comment">Comment (optional)</label>
-                            <textarea
-                                id="comment"
-                                name="comment"
-                                maxlength="2000"
-                                rows="4"
-                                placeholder="What should other people know about this place?"
-                            ></textarea>
+                    <div class="field">
+                        <label for="comment">Comment <span class="label-hint">(optional)</span></label>
+                        <textarea
+                            id="comment"
+                            name="comment"
+                            maxlength="2000"
+                            rows="4"
+                            placeholder="What should other people know about this place?"
+                        ></textarea>
+                    </div>
 
-                            <button type="submit">Submit Review</button>
-                        </form>
-                    <?php endif; ?>
-                </div>
+                    <button type="submit" class="btn btn--solid">Submit Review</button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </section>
 
-        </section>
-
-    </main>
-
+</main>
 </body>
 </html>

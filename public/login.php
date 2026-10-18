@@ -68,54 +68,75 @@ function escape(string $value): string
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Hangout</title>
+    <meta name="description" content="Log in to Hangout to discover and review places around campus.">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<header>
-    <h1>Hangout</h1>
-    <p>Welcome back to your campus community.</p>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+    <div class="site-header__inner">
+        <div class="brand">
+            <a href="index.php" class="brand__name">Hangout</a>
+            <p class="brand__tagline">Welcome back to your campus community.</p>
+        </div>
+    </div>
 </header>
 
-<main>
-    <section class="place-detail">
-        <h2>Login</h2>
+<main id="main" class="container container--narrow">
+
+    <section class="auth-card" aria-labelledby="login-heading">
+        <header class="auth-card__header">
+            <h1 id="login-heading">Login</h1>
+            <p class="auth-card__subtitle">Sign in to review places and save your favorites.</p>
+        </header>
 
         <?php if ($error !== ''): ?>
-            <p role="alert"><?= escape($error) ?></p>
+            <div class="alert alert--error" role="alert">
+                <?= escape($error) ?>
+            </div>
         <?php endif; ?>
 
-        <form method="POST" action="login.php" class="search-form">
+        <form method="POST" action="login.php" class="auth-form">
             <input
                 type="hidden"
                 name="csrf_token"
                 value="<?= escape($_SESSION['csrf_token']) ?>"
             >
 
-            <label for="email">Email</label>
-            <input
-                type="email"
-                id="email"
-                name="email"
-                autocomplete="email"
-                maxlength="255"
-                required
-            >
+            <div class="field">
+                <label for="email">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    autocomplete="email"
+                    maxlength="255"
+                    required
+                >
+            </div>
 
-            <label for="password">Password</label>
-            <input
-                type="password"
-                id="password"
-                name="password"
-                autocomplete="current-password"
-                required
-            >
+            <div class="field">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
 
-            <button type="submit">Login</button>
+            <button type="submit" class="btn btn--solid btn--block">Login</button>
         </form>
 
-        <p>Don't have an account? <a href="register.php">Register here</a></p>
-        <p><a href="index.php">Back to Hangout</a></p>
+        <footer class="auth-card__footer">
+            <p>Don't have an account? <a href="register.php">Register here</a></p>
+            <p><a href="index.php" class="link-muted">← Back to Hangout</a></p>
+        </footer>
     </section>
+
 </main>
 </body>
 </html>

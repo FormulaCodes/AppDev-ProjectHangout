@@ -1,6 +1,7 @@
 
 
-<?php  
+
+<?php
 
 class Place
 {
@@ -13,7 +14,8 @@ class Place
 
     public function getAll(
         string $search = '',
-        string $tagSlug = ''
+        string $tagSlug = '',
+        bool $includeInactive = false
     ): array {
         $sql = "
             SELECT
@@ -21,6 +23,7 @@ class Place
                 p.name,
                 p.description,
                 p.address,
+                p.is_active,
                 GROUP_CONCAT(
                     DISTINCT t.name
                     ORDER BY t.name
@@ -33,6 +36,10 @@ class Place
         ";
 
         $params = [];
+
+        if (!$includeInactive) {
+            $sql .= " AND p.is_active = 1";
+        }
 
         if ($search !== '') {
             $sql .= "
@@ -70,7 +77,8 @@ class Place
                 p.id,
                 p.name,
                 p.description,
-                p.address
+                p.address,
+                p.is_active
             ORDER BY p.name ASC
         ";
 
@@ -91,97 +99,126 @@ class Place
         return $this->db->query($sql)->fetchAll();
     }
 
-    
-public function getById(int $id): ?array
-{
-    $sql = "
-        SELECT
-            p.id,
-            p.name,
-            p.description,
-            p.address,
-            p.latitude,
-            p.longitude,
-            GROUP_CONCAT(
-                DISTINCT t.name
-                ORDER BY t.name
-                SEPARATOR ', '
-            ) AS tags
-        FROM places p
-        LEFT JOIN place_tags pt ON p.id = pt.place_id
-        LEFT JOIN tags t ON pt.tag_id = t.id
-        WHERE p.id = :id
-        GROUP BY
-            p.id,
-            p.name,
-            p.description,
-            p.address,
-            p.latitude,
-            p.longitude
-    ";
+    public function getById(
+        int $id,
+        bool $includeInactive = false
+    ): ?array {
+        $sql = "
+            SELECT
+                p.id,
+                p.name,
+                p.description,
+                p.address,
+                p.latitude,
+                p.longitude,
+                p.is_active,
+                GROUP_CONCAT(
+                    DISTINCT t.name
+                    ORDER BY t.name
+                    SEPARATOR ', '
+                ) AS tags
+            FROM places p
+            LEFT JOIN place_tags pt ON p.id = pt.place_id
+            LEFT JOIN tags t ON pt.tag_id = t.id
+            WHERE p.id = :id
+        ";
 
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute(['id' => $id]);
+        if (!$includeInactive) {
+            $sql .= " AND p.is_active = 1";
+        }
 
-    $place = $stmt->fetch();
+        $sql .= "
+            GROUP BY
+                p.id,
+                p.name,
+                p.description,
+                p.address,
+                p.latitude,
+                p.longitude,
+                p.is_active
+        ";
 
-    return $place ?: null;
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        $place = $stmt->fetch();
+
+        return $place ?: null;
+    }
+
+    public function create(
+        string $name,
+        string $description,
+        string $address
+    ): int {
+        $sql = "
+            INSERT INTO places (name, description, address)
+            VALUES (:name, :description, :address)
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'name' => $name,
+            'description' => $description,
+            'address' => $address
+        ]);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function update(
+        int $id,
+        string $name,
+        string $description,
+        string $address
+    ): bool {
+        $sql = "
+            UPDATE places
+            SET name = :name,
+                description = :description,
+                address = :address
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'name' => $name,
+            'description' => $description,
+            'address' => $address
+        ]);
+    }
+
+    // Soft-delete: preserve the place and its related data.
+    public function delete(int $id): bool
+    {
+        $sql = "
+            UPDATE places
+            SET is_active = 0
+            WHERE id = :id
+              AND is_active = 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    // Restore a previously deactivated place.
+    public function restore(int $id): bool
+    {
+        $sql = "
+            UPDATE places
+            SET is_active = 1
+            WHERE id = :id
+              AND is_active = 0
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->rowCount() > 0;
+    }
 }
-
-
-public function create(
-    string $name,
-    string $description,
-    string $address
-): int {
-    $sql = "
-        INSERT INTO places (name, description, address)
-        VALUES (:name, :description, :address)
-    ";
-
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([
-        'name' => $name,
-        'description' => $description,
-        'address' => $address
-    ]);
-
-    return (int) $this->db->lastInsertId();
-}
-
-public function update(
-    int $id,
-    string $name,
-    string $description,
-    string $address
-): bool {
-    $sql = "
-        UPDATE places
-        SET name = :name,
-            description = :description,
-            address = :address
-        WHERE id = :id
-    ";
-
-    $stmt = $this->db->prepare($sql);
-
-    return $stmt->execute([
-        'id' => $id,
-        'name' => $name,
-        'description' => $description,
-        'address' => $address
-    ]);
-}
-
-public function delete(int $id): bool
-{
-    $sql = "DELETE FROM places WHERE id = :id";
-
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute(['id' => $id]);
-
-    return $stmt->rowCount() > 0;
-}
-
-}
-
